@@ -5,39 +5,54 @@ namespace App\Http\Controllers;
 use App\Models\{Thread, Comment};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Support\SaveImages;
+
 
 class CommentController extends Controller
 {
     public function store(Request $request, Thread $thread)
     {
-        if ($thread->is_locked) {
-            abort(403, 'Locked');
-        }
-
         $data = $request->validate([
             'content'   => ['required', 'string', 'min:1', 'max:10000'],
-            'parent_id' => ['nullable', 'exists:comments,id'],
+            'parent_id' => ['nullable', 'integer', 'exists:comments,id'],
+            'images.*'  => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'],
         ]);
 
-        $depth = 0;
-        if (!empty($data['parent_id'])) {
-            $parent = Comment::findOrFail($data['parent_id']);
-            $depth = min(5, $parent->depth + 1);
+        // Ambil parent di thread yang sama (supaya tidak bisa reply ke comment thread lain)
+        $parentId = $data['parent_id'] ?? null;
+        $parent   = null;
+        if ($parentId) {
+            $parent = Comment::where('id', $parentId)
+                ->where('thread_id', $thread->id)
+                ->firstOrFail(); // 404 jika parent tidak di thread ini
         }
 
-        Comment::create([
+        // Tentukan depth
+        $depth = $parent ? ($parent->depth + 1) : 0;
+
+        // (Opsional) batasi kedalaman, contoh maksimal 5
+        // $depth = min($depth, 5);
+
+        $comment = Comment::create([
             'thread_id'       => $thread->id,
-            'parent_id'       => $data['parent_id'] ?? null,
-            'anon_session_id' => (int) $request->attributes->get('anon_id'),
-            'user_id'         => Auth::id(),              // null jika anon
+            'parent_id'       => $parentId,
+            'anon_session_id' => Auth::check() ? null : (int) $request->attributes->get('anon_id'),
+            'user_id'         => Auth::id(),
             'depth'           => $depth,
             'content'         => $data['content'],
         ]);
+
+        if ($request->hasFile('images')) {
+            foreach (SaveImages::storeMany($request->file('images')) as $att) {
+                $comment->attachments()->create($att);
+            }
+        }
 
         $thread->increment('comment_count');
 
         return back()->with('ok', 'Posted');
     }
+
 
     public function destroy(Request $request, Comment $comment)
     {

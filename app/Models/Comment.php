@@ -44,4 +44,9 @@ class Comment extends Model
         $this->score = (int) $this->votes()->sum('value');
         $this->saveQuietly();
     }
+
+    public function attachments()
+    {
+        return $this->morphMany(\App\Models\Attachment::class, 'attachable');
+    }
 }

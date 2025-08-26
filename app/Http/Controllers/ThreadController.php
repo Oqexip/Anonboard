@@ -6,6 +6,7 @@ use App\Models\{Board, Thread};
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use App\Support\SaveImages;
 
 
 
@@ -31,22 +32,27 @@ class ThreadController extends Controller
 
     public function store(Request $request, Board $board)
     {
+        // validasi tambah:
         $data = $request->validate([
             'title'   => ['nullable', 'string', 'max:140'],
             'content' => ['required', 'string', 'min:3', 'max:10000'],
+            'images.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'], // 4MB/each
         ]);
-
-        $anonId = (int) $request->attributes->get('anon_id'); // selalu ada dari middleware 'anon'
 
         $thread = Thread::create([
             'board_id'        => $board->id,
-            'anon_session_id' => $anonId,          // <-- selalu diisi
-            'user_id'         => Auth::id(),       // <-- null jika anon, id user jika login
+            'anon_session_id' => Auth::check() ? null : (int) $request->attributes->get('anon_id'),
+            'user_id'         => Auth::id(),
             'title'           => $data['title'] ?? null,
             'content'         => $data['content'],
         ]);
 
-        return redirect()->route('threads.show', $thread);
+        if ($request->hasFile('images')) {
+            foreach (SaveImages::storeMany($request->file('images')) as $att) {
+                $thread->attachments()->create($att);
+            }
+        }
+        return redirect()->route('threads.show', $thread)->with('ok', 'Posted');
     }
 
 
