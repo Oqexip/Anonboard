@@ -6,8 +6,14 @@ use App\Models\{User, Thread};
 
 class ThreadPolicy
 {
-    public function delete(?User $user, Thread $thread): bool
+    public function delete(User $user, Thread $thread): bool
     {
-        return $user && in_array($user->role, ['admin', 'moderator']);
+        return $user->isAdmin() || $thread->user_id === $user->id;
+    }
+
+    public function create(?User $user): bool
+    {
+        // semua boleh (login maupun anon). Policy ini hanya untuk contoh.
+        return true;
     }
 }

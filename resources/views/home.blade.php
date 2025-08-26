@@ -1,4 +1,4 @@
-<x-layouts.app>
+<x-app-layout>
     <h1 class="text-2xl font-bold mb-4">Boards</h1>
     <div class="grid sm:grid-cols-2 gap-4">
         @foreach ($boards as $b)
@@ -8,4 +8,4 @@
             </a>
         @endforeach
     </div>
-</x-layouts.app>
+</x-app-layout>

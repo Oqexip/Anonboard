@@ -10,7 +10,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Thread extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['board_id', 'anon_session_id', 'title', 'content'];
+    protected $fillable = ['board_id', 'anon_session_id', "user_id", 'title', 'content'];
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+    public function anon()
+    {
+        return $this->belongsTo(AnonSession::class, 'anon_session_id');
+    }
 
 
     public function board()

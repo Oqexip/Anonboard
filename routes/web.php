@@ -1,42 +1,53 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Http\Request;
-use App\Http\Middleware\EnsureAnonSession;
-use App\Http\Controllers\{ThreadController, CommentController, VoteController, ReportController};
+use App\Http\Controllers\ThreadController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\CommentController;
 use App\Models\Board;
 
+/*
+|--------------------------------------------------------------------------
+| Public (Anonymous) + Anon middleware
+|--------------------------------------------------------------------------
+| Semua request melewati EnsureAnonSession agar ada anon_id, termasuk
+| create/delete (controller yang memutuskan izin delete).
+*/
 
-// Rate limiters
-RateLimiter::for('post-actions', function (Request $request) {
-    $key = ($request->session()->getId() ?? 'guest') . '|' . $request->ip();
-    return [\Illuminate\Cache\RateLimiting\Limit::perMinute(10)->by($key)];
-});
+Route::middleware('anon')->group(function () {
 
+    // Home
+    Route::get('/', function () {
+        return view('home', ['boards' => Board::all()]);
+    })->name('home');
 
-// Home
-Route::get('/', function () {
-    $boards = Board::all();
-    return view('home', compact('boards'));
-});
-
-
-Route::middleware(['web', EnsureAnonSession::class])->group(function () {
+    // Board & threads
     Route::get('/b/{board:slug}', [ThreadController::class, 'index'])->name('boards.show');
+    Route::post('/b/{board:slug}/threads', [ThreadController::class, 'store'])->name('threads.store');
+
+    // Thread detail
     Route::get('/t/{thread}', [ThreadController::class, 'show'])->name('threads.show');
 
+    // Comments
+    Route::post('/t/{thread}/comments', [CommentController::class, 'store'])->name('comments.store');
 
-    Route::post('/b/{board:slug}/threads', [ThreadController::class, 'store'])->middleware('throttle:post-actions');
-    Route::post('/t/{thread}/comments', [CommentController::class, 'store'])->middleware('throttle:post-actions');
-
-
-    Route::post('/vote', [VoteController::class, 'store'])->middleware('throttle:post-actions');
-    Route::post('/report', [ReportController::class, 'store'])->middleware('throttle:post-actions');
+    // Deletes (owner anon <=15 menit / owner user via policy / admin via Gate)
+    Route::delete('/t/{thread}', [ThreadController::class, 'destroy'])->name('threads.destroy');
+    Route::delete('/c/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 });
 
-Route::post('/upload', function (Request $request) {
-    $request->validate(['image' => ['required', 'image', 'max:2048']]);
-    $path = $request->file('image')->store('public/uploads');
-    return ['url' => \Illuminate\Support\Facades\Storage::url($path)];
-})->middleware(['web', EnsureAnonSession::class, 'throttle:post-actions']);
+/*
+|--------------------------------------------------------------------------
+| Authenticated (Breeze)
+|--------------------------------------------------------------------------
+*/
+Route::get('/dashboard', fn() => view('dashboard'))
+    ->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+require __DIR__ . '/auth.php';

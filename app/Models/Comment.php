@@ -10,7 +10,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Comment extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['thread_id', 'parent_id', 'anon_session_id', 'content', 'depth'];
+    protected $fillable = ['thread_id', 'parent_id', 'anon_session_id', 'user_id', 'depth', 'content'];
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+    public function anon()
+    {
+        return $this->belongsTo(AnonSession::class, 'anon_session_id');
+    }
 
 
     public function thread()
@@ -23,7 +31,7 @@ class Comment extends Model
     }
     public function children()
     {
-        return $this->hasMany(Comment::class, 'parent_id');
+        return $this->hasMany(Comment::class, 'parent_id')->orderBy('created_at');        // supaya reply urut bawah parent;
     }
     public function votes()
     {

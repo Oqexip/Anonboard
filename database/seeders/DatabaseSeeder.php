@@ -27,5 +27,7 @@ class DatabaseSeeder extends Seeder
             ['slug' => 'programming',  'name' => 'Programming',  'description' => 'Diskusi tentang coding', 'created_at' => now(), 'updated_at' => now()],
             ['slug' => 'random',       'name' => 'Random',       'description' => 'Obrolan bebas',          'created_at' => now(), 'updated_at' => now()],
         ]);
+
+        $this->call(AdminUserSeeder::class);
     }
 }
