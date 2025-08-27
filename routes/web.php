@@ -34,6 +34,10 @@ Route::middleware('anon')->group(function () {
     // Deletes (owner anon <=15 menit / owner user via policy / admin via Gate)
     Route::delete('/t/{thread}', [ThreadController::class, 'destroy'])->name('threads.destroy');
     Route::delete('/c/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+
+    // routes/web.php (di dalam group 'anon' yang sama dengan store/show)
+    Route::patch('/t/{thread}', [ThreadController::class, 'update'])->name('threads.update');
+    Route::patch('/c/{comment}', [CommentController::class, 'update'])->name('comments.update');
 });
 
 /*

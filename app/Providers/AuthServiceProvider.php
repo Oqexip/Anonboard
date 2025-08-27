@@ -16,11 +16,11 @@ class AuthServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Daftarkan mapping policy (aman di semua versi)
-        $this->registerPolicies();
-
-        // Admin full access
-        Gate::before(function (?User $user) {
+        Gate::before(function (?User $user, string $ability) {
+            // admin tetap full access KECUALI untuk update
+            if ($ability === 'update') {
+                return null;
+            }
             return $user && $user->isAdmin() ? true : null;
         });
     }

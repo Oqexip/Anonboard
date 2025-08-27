@@ -14,15 +14,22 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
-            <div>
-                <a href="/">
-                    <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
+    <body class="font-sans text-gray-900 antialiased bg-gradient-to-br from-sky-50 via-white to-fuchsia-50 min-h-screen">
+        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0">
+            
+            {{-- Logo / Brand --}}
+            <div class="flex flex-col items-center space-y-2">
+                <a href="/" class="flex items-center gap-2">
+                    <x-application-logo class="w-16 h-16 text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-fuchsia-600" />
+                    <span class="text-2xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-fuchsia-600">
+                        {{ config('app.name', 'AnonBoard') }}
+                    </span>
                 </a>
+                <p class="text-slate-500 text-sm">Welcome back, please sign in</p>
             </div>
 
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
+            {{-- Card --}}
+            <div class="w-full sm:max-w-md mt-8 px-6 py-6 bg-white/80 backdrop-blur rounded-2xl shadow-lg border border-slate-200/60 ">
                 {{ $slot }}
             </div>
         </div>

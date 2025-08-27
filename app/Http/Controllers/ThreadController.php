@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\{Board, Thread};
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use App\Support\SaveImages;
 
@@ -12,6 +13,48 @@ use App\Support\SaveImages;
 
 class ThreadController extends Controller
 {
+
+    // app/Http/Controllers/ThreadController.php
+
+
+    public function update(Request $request, Thread $thread)
+    {
+        // hanya pemilik + <=15 menit
+        if (! $thread->isOwnedByRequest($request) || ! $thread->canEditNow()) {
+            abort(403, 'You can only edit your own thread within 15 minutes.');
+        }
+
+        $data = $request->validate([
+            'title'   => ['nullable', 'string', 'max:140'],
+            'content' => ['required', 'string', 'min:3', 'max:10000'],
+            // kalau mau izinkan tambah gambar saat edit, tinggal tambahkan:
+            // 'images.*' => ['image','max:5120'],
+        ]);
+
+        $thread->fill([
+            'title'   => $data['title'] ?? null,
+            'content' => $data['content'],
+        ]);
+
+        if ($thread->isDirty(['title', 'content'])) {
+            $thread->edited_at = now();
+        }
+
+        $thread->save();
+
+
+        // (opsional) jika ingin menambah lampiran saat edit:
+        // if ($request->hasFile('images')) {
+        //     foreach (SaveImages::storeMany($request->file('images')) as $att) {
+        //         $thread->attachments()->create($att);
+        //     }
+        // }
+
+        return back()->with('ok', 'Thread updated');
+    }
+
+
+
     public function index(Board $board)
     {
         $threads = $board->threads()->orderByDesc('is_pinned')->orderByDesc('score')->latest()->paginate(20);

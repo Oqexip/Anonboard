@@ -14,3 +14,50 @@
 /* @tailwind base;
 @tailwind components;
 @tailwind utilities; */
+
+/* resources/css/app.css */
+@layer components {
+    .hover-card {
+        @apply relative rounded-2xl border border-slate-200 bg-white/80 backdrop-blur
+           shadow-sm transition-all duration-300 ease-out;
+
+        /* posisi stacking konten di atas overlay */
+        z-index: 0;
+    }
+
+    /* Overlay gradient halus (soft tint) */
+    .hover-card::before {
+        content: "";
+        @apply absolute inset-0 rounded-2xl pointer-events-none opacity-0 transition-opacity duration-300;
+        background: linear-gradient(
+            135deg,
+            rgba(14, 165, 233, 0.25),
+            /* sky-500 → lebih tebal */ rgba(217, 70, 239, 0.25)
+                /* fuchsia-500 → lebih tebal */
+        );
+        z-index: -1;
+    }
+
+    /* Efek lift + glow saat hover/fokus */
+    .hover-card:hover,
+    .hover-card:focus-within {
+        @apply -translate-y-0.5 shadow-lg ring-1 ring-slate-200/70;
+        /* opsional: buat sedikit lebih terang */
+        background-color: rgb(255 255 255 / 0.9);
+    }
+
+    .hover-card:hover::before,
+    .hover-card:focus-within::before {
+        @apply opacity-100;
+    }
+}
+
+/* Hargai prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    .hover-card {
+        transition: none;
+    }
+    .hover-card::before {
+        transition: none;
+    }
+}

@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\{Thread, Comment};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Support\SaveImages;
-
 
 class CommentController extends Controller
 {
+    /**
+     * Simpan komentar baru ke sebuah thread.
+     */
     public function store(Request $request, Thread $thread)
     {
         $data = $request->validate([
@@ -18,42 +21,81 @@ class CommentController extends Controller
             'images.*'  => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'],
         ]);
 
-        // Ambil parent di thread yang sama (supaya tidak bisa reply ke comment thread lain)
+        // Pastikan parent (jika ada) masih di thread yang sama
         $parentId = $data['parent_id'] ?? null;
         $parent   = null;
+
         if ($parentId) {
-            $parent = Comment::where('id', $parentId)
+            $parent = Comment::whereKey($parentId)
                 ->where('thread_id', $thread->id)
-                ->firstOrFail(); // 404 jika parent tidak di thread ini
+                ->firstOrFail();
         }
 
-        // Tentukan depth
+        // Hitung depth (batasi jika perlu)
         $depth = $parent ? ($parent->depth + 1) : 0;
-
-        // (Opsional) batasi kedalaman, contoh maksimal 5
         // $depth = min($depth, 5);
 
-        $comment = Comment::create([
-            'thread_id'       => $thread->id,
-            'parent_id'       => $parentId,
-            'anon_session_id' => Auth::check() ? null : (int) $request->attributes->get('anon_id'),
-            'user_id'         => Auth::id(),
-            'depth'           => $depth,
-            'content'         => $data['content'],
-        ]);
+        DB::transaction(function () use ($request, $thread, $data, $parentId, $depth) {
+            $comment = Comment::create([
+                'thread_id'       => $thread->id,
+                'parent_id'       => $parentId,
+                'anon_session_id' => Auth::check() ? null : (int) $request->attributes->get('anon_id'),
+                'user_id'         => Auth::id(),
+                'depth'           => $depth,
+                'content'         => $data['content'],
+            ]);
 
-        if ($request->hasFile('images')) {
-            foreach (SaveImages::storeMany($request->file('images')) as $att) {
-                $comment->attachments()->create($att);
+            if ($request->hasFile('images')) {
+                foreach (SaveImages::storeMany($request->file('images')) as $att) {
+                    $comment->attachments()->create($att);
+                }
             }
-        }
 
-        $thread->increment('comment_count');
+            // Sinkronkan counter di thread
+            $thread->increment('comment_count');
+        });
 
         return back()->with('ok', 'Posted');
     }
 
+    /**
+     * Update komentar (hanya pemilik & dalam jangka waktu yang diizinkan).
+     * Kolom edited_at hanya diisi ketika content benar-benar berubah.
+     */
+    public function update(Request $request, Comment $comment)
+    {
+        // hanya pemilik + <=15 menit
+        if (! $comment->isOwnedByRequest($request) || ! $comment->canEditNow()) {
+            abort(403, 'You can only edit your own comment within 15 minutes.');
+        }
 
+        $data = $request->validate([
+            'content' => ['required', 'string', 'min:1', 'max:10000'],
+            // 'images.*' => ['image','max:5120'], // jika ingin izinkan lampiran saat edit
+        ]);
+
+        // Simpan hanya jika ada perubahan & set edited_at
+        $comment->fill(['content' => $data['content']]);
+
+        if ($comment->isDirty('content')) {
+            $comment->edited_at = now(); // <-- indikator edited yang akurat
+        }
+
+        $comment->save();
+
+        // (opsional) tambah lampiran baru saat edit
+        // if ($request->hasFile('images')) {
+        //     foreach (SaveImages::storeMany($request->file('images')) as $att) {
+        //         $comment->attachments()->create($att);
+        //     }
+        // }
+
+        return back()->with('ok', 'Comment updated');
+    }
+
+    /**
+     * Hapus komentar.
+     */
     public function destroy(Request $request, Comment $comment)
     {
         $anonId = (int) $request->attributes->get('anon_id');
@@ -66,17 +108,21 @@ class CommentController extends Controller
         $recent = $comment->created_at && $comment->created_at->gt(now()->subMinutes(15));
 
         if ($isOwner && $recent) {
-            $comment->delete();
-            // sinkronkan counter pada thread (opsional tapi disarankan)
-            $comment->thread()->decrement('comment_count');
+            DB::transaction(function () use ($comment) {
+                $comment->delete();
+                $comment->thread()->decrement('comment_count');
+            });
+
             return back()->with('ok', 'Comment removed');
         }
 
         // selain itu, pakai policy (admin/mod, dsb.)
         $this->authorize('delete', $comment);
 
-        $comment->delete();
-        $comment->thread()->decrement('comment_count');
+        DB::transaction(function () use ($comment) {
+            $comment->delete();
+            $comment->thread()->decrement('comment_count');
+        });
 
         return back()->with('ok', 'Comment removed');
     }
