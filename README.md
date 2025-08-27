@@ -1,6 +1,3 @@
----
-
-````markdown
 # AnonBoard 📝  
 Platform diskusi anonim sederhana berbasis **Laravel 11 + TailwindCSS**.  
 Pengguna dapat membuat thread, membalas komentar, dan berdiskusi tanpa harus mengungkap identitas asli mereka.  
