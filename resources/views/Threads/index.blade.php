@@ -5,33 +5,60 @@
     {{-- Page header --}}
     <div class="mb-6 flex items-center justify-between">
         <a href="#"
-            class="inline-flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-fuchsia-600 hover:from-sky-700 hover:to-fuchsia-700 text-2xl font-bold"">/{{ $board->slug }}</a>
+            class="inline-flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-fuchsia-600 hover:from-sky-700 hover:to-fuchsia-700 text-2xl font-bold">/{{ $board->slug }}</a>
     </div>
+
     {{-- Post form --}}
     <form action="{{ route('threads.store', $board) }}" method="POST" enctype="multipart/form-data"
-        class=" mb-8 bg-white/80 backdrop-blur rounded-2xl border border-slate-200 p-5 shadow-sm ">
+        class="mb-8 bg-white/80 backdrop-blur rounded-2xl border border-slate-200 p-5 shadow-sm">
         @csrf
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center"><input name="title" placeholder="Title (optional)"
-                class="sm:w-80 w-full rounded-xl border border-slate-50 px-3 py-2
-           focus:border-sky-500 focus:ring-sky-500" />
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <input name="title" placeholder="Title (optional)"
+                class="sm:w-80 w-full rounded-xl border border-slate-50 px-3 py-2 focus:border-sky-500 focus:ring-sky-500" />
 
             <input name="content" placeholder="Say something..." required
-                class="flex-1 rounded-xl border border-slate-50 px-3 py-2
-           focus:border-sky-500 focus:ring-sky-500" />
+                class="flex-1 rounded-xl border border-slate-50 px-3 py-2 focus:border-sky-500 focus:ring-sky-500" />
 
-            <div class="flex items-center gap-2"> <input id="images-input" type="file" name="images[]"
-                    accept="image/*" multiple class="hidden" onchange="__updateFileLabel(this)" /> <label
-                    for="images-input"
+            <div class="flex items-center gap-2">
+                <input id="images-input" type="file" name="images[]" accept="image/*" multiple class="hidden"
+                    onchange="__updateFileLabel(this)" />
+                <label for="images-input"
                     class="inline-flex items-center gap-2 px-3 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 cursor-pointer text-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                         <path
                             d="M20 6h-3.586l-1.707-1.707A.996.996 0 0 0 14 4h-4c-.265 0-.52.105-.707.293L7.586 6H4c-1.103 0-2 .897-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8c0-1.103-.897-2-2-2zM12 19a5 5 0 1 1 0-10 5 5 0 0 1 0 10z" />
-                    </svg> <span id="images-label" class="text-slate-700">Attach images</span> </label> <button
-                    type="button" class="px-2 h-10 text-sm text-slate-500 hover:text-slate-700"
-                    onclick="__clearFiles()">Clear</button> </div> <button
+                    </svg>
+                    <span id="images-label" class="text-slate-700">Attach images</span>
+                </label>
+                <button type="button" class="px-2 h-10 text-sm text-slate-500 hover:text-slate-700"
+                    onclick="__clearFiles()">Clear</button>
+            </div>
+
+            <button
                 class="px-4 h-10 rounded-xl text-white shadow-sm bg-gradient-to-r from-sky-500 to-fuchsia-600 hover:from-sky-600 hover:to-fuchsia-700 shrink-0">
-                Post </button>
+                Post
+            </button>
+        </div>
+    </form>
+
+    {{-- Search bar --}}
+    <form action="{{ route('boards.show', $board) }}" method="GET" class="mb-6">
+        <div class="relative">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari thread..."
+                class="w-full h-11 shadow-sm rounded-xl border border-slate-300 bg-white/80 px-4 pr-10 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-300 transition" />
+            <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="7" stroke-width="1.6"/>
+                    <path d="M20 20l-3.5-3.5" stroke-width="1.6"/>
+                </svg>
+            </button>
+            @if(request('q'))
+                <a href="{{ route('boards.show', $board) }}"
+                   class="absolute right-10 top-1/2 -translate-y-1/2 text-slate-400 text-sm hover:text-slate-600">
+                    ✕
+                </a>
+            @endif
         </div>
     </form>
 
@@ -50,7 +77,6 @@
 
                 <div class="mt-1 text-sm text-slate-600 flex items-center gap-4 flex-wrap">
                     <span class="inline-flex items-center gap-1">
-                        {{-- comments icon --}}
                         <svg xmlns="http://www.w3.org/2000/svg"
                             class="h-4 w-4 text-slate-500 group-hover:text-sky-600 transition" viewBox="0 0 24 24"
                             fill="currentColor">
@@ -60,7 +86,6 @@
                     </span>
 
                     <span class="inline-flex items-center gap-1">
-                        {{-- time icon --}}
                         <svg xmlns="http://www.w3.org/2000/svg"
                             class="h-4 w-4 text-slate-500 group-hover:text-sky-600 transition" viewBox="0 0 24 24"
                             fill="currentColor">

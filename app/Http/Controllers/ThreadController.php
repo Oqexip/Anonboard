@@ -4,22 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\{Board, Thread};
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use App\Support\SaveImages;
 
-
-
 class ThreadController extends Controller
 {
-
-    // app/Http/Controllers/ThreadController.php
-
-
+    /**
+     * Update thread
+     * Syarat: pemilik dan <= 15 menit (atau gunakan policy sendiri).
+     */
     public function update(Request $request, Thread $thread)
     {
-        // hanya pemilik + <=15 menit
         if (! $thread->isOwnedByRequest($request) || ! $thread->canEditNow()) {
             abort(403, 'You can only edit your own thread within 15 minutes.');
         }
@@ -27,12 +22,11 @@ class ThreadController extends Controller
         $data = $request->validate([
             'title'   => ['nullable', 'string', 'max:140'],
             'content' => ['required', 'string', 'min:3', 'max:10000'],
-            // kalau mau izinkan tambah gambar saat edit, tinggal tambahkan:
-            // 'images.*' => ['image','max:5120'],
+            // 'images.*' => ['image', 'max:5120'], // aktifkan jika izinkan tambah gambar saat edit
         ]);
 
         $thread->fill([
-            'title'   => $data['title'] ?? null,
+            'title'   => $data['title']   ?? null,
             'content' => $data['content'],
         ]);
 
@@ -42,8 +36,7 @@ class ThreadController extends Controller
 
         $thread->save();
 
-
-        // (opsional) jika ingin menambah lampiran saat edit:
+        // Opsional: simpan lampiran baru saat edit
         // if ($request->hasFile('images')) {
         //     foreach (SaveImages::storeMany($request->file('images')) as $att) {
         //         $thread->attachments()->create($att);
@@ -53,33 +46,75 @@ class ThreadController extends Controller
         return back()->with('ok', 'Thread updated');
     }
 
-
-
-    public function index(Board $board)
+    /**
+     * Index threads per board + search ?q=
+     * Urutan:
+     * - is_pinned desc selalu di depan
+     * - jika q ada dan FULLTEXT: urut berdasar skor fulltext desc
+     * - jika q ada dan fallback LIKE: created_at desc
+     * - jika q kosong: score desc lalu created_at desc
+     */
+    public function index(Board $board, Request $request)
     {
-        $threads = $board->threads()->orderByDesc('is_pinned')->orderByDesc('score')->latest()->paginate(20);
-        return view('threads.index', compact('board', 'threads'));
+        $q = trim((string) $request->query('q', ''));
+
+        $threads = Thread::query()
+            ->where('board_id', $board->id)
+            ->with(['user:id,name']) // hindari N+1
+            ->when($q !== '', function ($query) use ($q) {
+                if (method_exists(Thread::class, 'supportsFullText') && Thread::supportsFullText()) {
+                    // Sanit sederhana untuk boolean mode
+                    $term = preg_replace('/[^\p{L}\p{N}\s\+\-\*\~\"\(\)]/u', ' ', $q);
+                    $query->whereRaw("MATCH(title, content) AGAINST (? IN BOOLEAN MODE)", [$term.'*'])
+                          ->orderByRaw("MATCH(title, content) AGAINST (? IN BOOLEAN MODE) DESC", [$term.'*']);
+                } else {
+                    // Fallback LIKE (escape % dan _)
+                    $like = '%'.addcslashes($q, '%_').'%';
+                    $query->where(function ($w) use ($like) {
+                        $w->where('title', 'like', $like)
+                          ->orWhere('content', 'like', $like);
+                    })
+                    ->latest(); // untuk LIKE, urut terbaru
+                }
+            })
+            // is_pinned selalu prioritas pertama
+            ->orderByDesc('is_pinned')
+            // Jika q kosong, pakai ranking default
+            ->when($q === '', fn ($qq) => $qq->orderByDesc('score')->latest())
+            ->paginate(20)
+            ->withQueryString(); // bawa ?q ke pagination
+
+        return view('threads.index', [
+            'board'   => $board,
+            'threads' => $threads,
+            'q'       => $q,
+            'title'   => $q ? "Hasil untuk “{$q}” di {$board->name}" : $board->name,
+        ]);
     }
 
-
+    /**
+     * Show thread + komentar terstruktur
+     */
     public function show(Thread $thread)
     {
         $thread->load(['user', 'comments.user']); // eager load
-        // urutkan agar root->child tampil dari lama ke baru (atau sesuaikan)
+
+        // Tampilkan komentar dari lama ke baru per parent
         $comments = $thread->comments()->orderBy('created_at')->get();
-        $grouped  = $comments->groupBy('parent_id'); // kunci: parent_id
+        $grouped  = $comments->groupBy('parent_id'); // kunci parent_id
 
         return view('threads.show', compact('thread', 'grouped'));
     }
 
-
+    /**
+     * Store thread baru di board
+     */
     public function store(Request $request, Board $board)
     {
-        // validasi tambah:
         $data = $request->validate([
-            'title'   => ['nullable', 'string', 'max:140'],
-            'content' => ['required', 'string', 'min:3', 'max:10000'],
-            'images.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'], // 4MB/each
+            'title'     => ['nullable', 'string', 'max:140'],
+            'content'   => ['required', 'string', 'min:3', 'max:10000'],
+            'images.*'  => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'],
         ]);
 
         $thread = Thread::create([
@@ -95,27 +130,38 @@ class ThreadController extends Controller
                 $thread->attachments()->create($att);
             }
         }
+
         return redirect()->route('threads.show', $thread)->with('ok', 'Posted');
     }
 
-
+    /**
+     * Destroy thread
+     * Anon owner boleh hapus <= 15 menit, selain itu pakai policy (moderator/admin).
+     * Setelah hapus, redirect ke board agar tidak 404.
+     */
     public function destroy(Request $request, Thread $thread)
     {
-        // Simpan board tujuan SEBELUM delete
-        $board = $thread->board; // pastikan relasi board() ada di model Thread
+        $board  = $thread->board; // simpan sebelum delete
         $anonId = (int) $request->attributes->get('anon_id');
+
         $isOwner = $thread->anon_session_id === $anonId;
-        $recent = $thread->created_at->gt(now()->subMinutes(15));
+        $recent  = $thread->created_at->gt(now()->subMinutes(15));
+
         if ($isOwner && $recent) {
             $thread->delete();
-            return  redirect()
-                ->route('boards.show', $board)  // /b/{slug}
+
+            return redirect()
+                ->route('boards.show', $board)
                 ->with('ok', 'Thread removed');
         }
-        $this->authorize('delete', $thread); // for moderators
+
+        // moderator/admin via policy
+        $this->authorize('delete', $thread);
+
         $thread->delete();
+
         return redirect()
-            ->route('boards.show', $board)      // kembali ke board, tidak 404
+            ->route('boards.show', $board)
             ->with('ok', 'Thread removed');
     }
 }

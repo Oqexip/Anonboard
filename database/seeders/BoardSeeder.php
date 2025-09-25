@@ -28,9 +28,9 @@ class BoardSeeder extends Seeder
         ]);
 
         Board::create([
-            'slug' => 'ngeluh',
-            'name' => 'Ngeluh',
-            'description' => 'Tempat untuk berkeluh kesah dengan bebas',
+            'slug' => 'politic',
+            'name' => 'Politic',
+            'description' => 'politic only board',
         ]);
 
         Board::create([
@@ -67,6 +67,16 @@ class BoardSeeder extends Seeder
             'slug' => 'sports',
             'name' => 'Sports',
             'description' => 'Bahas olahraga, tim favorit, dan event olahraga dunia',
+        ]);
+        Board::create([
+            'slug' => 'finance',
+            'name' => 'Finance',
+            'description' => 'Diskusi tentang keuangan',
+        ]);
+        Board::create([
+            'slug' => 'creative',
+            'name' => 'Creative',
+            'description' => 'diskusi seputar bidang kreatif',
         ]);
     }
 }

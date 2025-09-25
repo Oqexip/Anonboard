@@ -34,9 +34,9 @@
 
         <div class="flex items-center justify-end mt-4">
             @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
+                <p class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
                     {{ __('Forgot your password?') }}
-                </a>
+                </p>{{-- ubah tagnya menjadi a dari p jika ingin mendevelop forgot password --}}
             @endif
 
             <x-primary-button class="ms-3 bg-gradient-to-r from-sky-600 to-fuchsia-600">

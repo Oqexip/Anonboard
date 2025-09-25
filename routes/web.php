@@ -10,8 +10,9 @@ use App\Models\Board;
 |--------------------------------------------------------------------------
 | Public (Anonymous) + Anon middleware
 |--------------------------------------------------------------------------
-| Semua request melewati EnsureAnonSession agar ada anon_id, termasuk
-| create/delete (controller yang memutuskan izin delete).
+| Semua request melewati EnsureAnonSession agar ada anon_id.
+| Izin hapus/edit tetap diputuskan oleh policy/controller (owner anon <=15 menit,
+| owner user, atau admin via Gate).
 */
 
 Route::middleware('anon')->group(function () {
@@ -21,7 +22,7 @@ Route::middleware('anon')->group(function () {
         return view('home', ['boards' => Board::all()]);
     })->name('home');
 
-    // Board & threads
+    // Boards & Threads (index per board + create thread di board tsb)
     Route::get('/b/{board:slug}', [ThreadController::class, 'index'])->name('boards.show');
     Route::post('/b/{board:slug}/threads', [ThreadController::class, 'store'])->name('threads.store');
 
@@ -31,13 +32,12 @@ Route::middleware('anon')->group(function () {
     // Comments
     Route::post('/t/{thread}/comments', [CommentController::class, 'store'])->name('comments.store');
 
-    // Deletes (owner anon <=15 menit / owner user via policy / admin via Gate)
-    Route::delete('/t/{thread}', [ThreadController::class, 'destroy'])->name('threads.destroy');
-    Route::delete('/c/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
-
-    // routes/web.php (di dalam group 'anon' yang sama dengan store/show)
+    // Update (edit) & Delete (thread + comment)
     Route::patch('/t/{thread}', [ThreadController::class, 'update'])->name('threads.update');
+    Route::delete('/t/{thread}', [ThreadController::class, 'destroy'])->name('threads.destroy');
+
     Route::patch('/c/{comment}', [CommentController::class, 'update'])->name('comments.update');
+    Route::delete('/c/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 });
 
 /*
@@ -45,13 +45,23 @@ Route::middleware('anon')->group(function () {
 | Authenticated (Breeze)
 |--------------------------------------------------------------------------
 */
-Route::get('/dashboard', fn() => view('dashboard'))
-    ->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', fn () => view('dashboard'))
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile',  [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile',[ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile',[ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';
+
+/*
+|--------------------------------------------------------------------------
+| Fallback 404 (opsional, supaya 404 lebih ramah)
+|--------------------------------------------------------------------------
+*/
+Route::fallback(function () {
+    abort(404);
+});
