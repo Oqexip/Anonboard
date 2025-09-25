@@ -4,7 +4,7 @@
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3-blue?logo=tailwindcss)  
 ![License](https://img.shields.io/badge/license-MIT-green)  
 
-**AnonBoard** is a simple anonymous discussion platform built with **Laravel 12 + TailwindCSS**.  
+**ObrolIn** is a simple anonymous discussion platform built with **Laravel 12 + TailwindCSS**.  
 Users can create threads, post comments, and reply without revealing their real identity.  
 
 ---
