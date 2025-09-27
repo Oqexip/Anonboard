@@ -1,4 +1,4 @@
-# AnonBoard 📝  
+# OmongIn 📝  
 
 ![Laravel](https://img.shields.io/badge/Laravel-12-red?logo=laravel)  
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3-blue?logo=tailwindcss)  
