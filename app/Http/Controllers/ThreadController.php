@@ -6,6 +6,8 @@ use App\Models\{Board, Thread};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Support\SaveImages;
+use Illuminate\Validation\Rule;
+
 
 class ThreadController extends Controller
 {
@@ -54,43 +56,42 @@ class ThreadController extends Controller
      * - jika q ada dan fallback LIKE: created_at desc
      * - jika q kosong: score desc lalu created_at desc
      */
-    public function index(Board $board, Request $request)
-    {
-        $q = trim((string) $request->query('q', ''));
+public function index(Board $board, Request $request)
+{
+    $q         = trim((string) $request->query('q', ''));
+    $category  = $request->query('category'); // slug kategori
 
-        $threads = Thread::query()
-            ->where('board_id', $board->id)
-            ->with(['user:id,name']) // hindari N+1
-            ->when($q !== '', function ($query) use ($q) {
-                if (method_exists(Thread::class, 'supportsFullText') && Thread::supportsFullText()) {
-                    // Sanit sederhana untuk boolean mode
-                    $term = preg_replace('/[^\p{L}\p{N}\s\+\-\*\~\"\(\)]/u', ' ', $q);
-                    $query->whereRaw("MATCH(title, content) AGAINST (? IN BOOLEAN MODE)", [$term.'*'])
-                          ->orderByRaw("MATCH(title, content) AGAINST (? IN BOOLEAN MODE) DESC", [$term.'*']);
-                } else {
-                    // Fallback LIKE (escape % dan _)
-                    $like = '%'.addcslashes($q, '%_').'%';
-                    $query->where(function ($w) use ($like) {
-                        $w->where('title', 'like', $like)
-                          ->orWhere('content', 'like', $like);
-                    })
-                    ->latest(); // untuk LIKE, urut terbaru
-                }
-            })
-            // is_pinned selalu prioritas pertama
-            ->orderByDesc('is_pinned')
-            // Jika q kosong, pakai ranking default
-            ->when($q === '', fn ($qq) => $qq->orderByDesc('score')->latest())
-            ->paginate(20)
-            ->withQueryString(); // bawa ?q ke pagination
+    $threads = Thread::query()
+        ->where('board_id', $board->id)
+        ->with(['user:id,name', 'category:id,name,slug'])
+        ->when($category, function ($query, $category) {
+            $query->whereHas('category', fn($q) => $q->where('slug', $category));
+        })
+        ->when($q !== '', function ($query) use ($q) {
+            $like = '%'.addcslashes($q, '%_').'%';
+            $query->where(function ($w) use ($like) {
+                $w->where('title', 'like', $like)
+                  ->orWhere('content', 'like', $like);
+            });
+        })
+        ->orderByDesc('is_pinned')
+        ->orderByDesc('score')
+        ->latest()
+        ->paginate(20)
+        ->withQueryString();
 
-        return view('threads.index', [
-            'board'   => $board,
-            'threads' => $threads,
-            'q'       => $q,
-            'title'   => $q ? "Hasil untuk “{$q}” di {$board->name}" : $board->name,
-        ]);
-    }
+    $categories = $board->categories()->select('id','name','slug')->get();
+
+    return view('threads.index', [
+        'board'      => $board,
+        'threads'    => $threads,
+        'categories' => $categories,
+        'q'          => $q,
+        'category'   => $category,
+        'title'      => $q ? "Hasil untuk “{$q}” di {$board->name}" : $board->name,
+    ]);
+}
+
 
     /**
      * Show thread + komentar terstruktur
@@ -109,30 +110,38 @@ class ThreadController extends Controller
     /**
      * Store thread baru di board
      */
-    public function store(Request $request, Board $board)
-    {
-        $data = $request->validate([
-            'title'     => ['nullable', 'string', 'max:140'],
-            'content'   => ['required', 'string', 'min:3', 'max:10000'],
-            'images.*'  => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'],
-        ]);
+public function store(Request $request, Board $board)
+{
+    $data = $request->validate([
+        'title'        => ['nullable', 'string', 'max:140'],
+        'content'      => ['required', 'string', 'min:3', 'max:10000'],
+        // kategori opsional, tapi harus ada di tabel categories DAN milik board yang sama
+        'category_id'  => [
+            'nullable',
+            'integer',
+            Rule::exists('categories', 'id')->where('board_id', $board->id),
+        ],
+        'images.*'     => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'],
+    ]);
 
-        $thread = Thread::create([
-            'board_id'        => $board->id,
-            'anon_session_id' => Auth::check() ? null : (int) $request->attributes->get('anon_id'),
-            'user_id'         => Auth::id(),
-            'title'           => $data['title'] ?? null,
-            'content'         => $data['content'],
-        ]);
+    $thread = Thread::create([
+        'board_id'        => $board->id,
+        'category_id'     => $data['category_id'] ?? null, // <= simpan kategori
+        'anon_session_id' => Auth::check() ? null : (int) $request->attributes->get('anon_id'),
+        'user_id'         => Auth::id(),
+        'title'           => $data['title'] ?? null,
+        'content'         => $data['content'],
+    ]);
 
-        if ($request->hasFile('images')) {
-            foreach (SaveImages::storeMany($request->file('images')) as $att) {
-                $thread->attachments()->create($att);
-            }
+    if ($request->hasFile('images')) {
+        foreach (SaveImages::storeMany($request->file('images')) as $att) {
+            $thread->attachments()->create($att);
         }
-
-        return redirect()->route('threads.show', $thread)->with('ok', 'Posted');
     }
+
+    return redirect()->route('threads.show', $thread)->with('ok', 'Posted');
+}
+
 
     /**
      * Destroy thread

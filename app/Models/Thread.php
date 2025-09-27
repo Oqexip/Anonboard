@@ -13,12 +13,12 @@ class Thread extends Model
 
     protected $fillable = [
         'board_id',
+        'category_id',
         'anon_session_id',
         'user_id',
         'title',
         'content',
         'edited_at',
-        // jika punya kolom ini di DB:
         'score',
         'is_pinned',
     ];
@@ -36,11 +36,26 @@ class Thread extends Model
     ];
 
     // ===== Relasi =====
-    public function user()     { return $this->belongsTo(User::class); }
-    public function anon()     { return $this->belongsTo(AnonSession::class, 'anon_session_id'); }
-    public function board()    { return $this->belongsTo(Board::class); }
-    public function comments() { return $this->hasMany(Comment::class); }
-    public function votes()    { return $this->morphMany(Vote::class, 'votable'); }
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+    public function anon()
+    {
+        return $this->belongsTo(AnonSession::class, 'anon_session_id');
+    }
+    public function board()
+    {
+        return $this->belongsTo(\App\Models\Board::class);
+    }
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+    public function votes()
+    {
+        return $this->morphMany(Vote::class, 'votable');
+    }
     public function attachments()
     {
         return $this->morphMany(\App\Models\Attachment::class, 'attachable');
@@ -60,6 +75,12 @@ class Thread extends Model
     {
         return $this->created_at && $this->created_at->gt(now()->subMinutes(15));
     }
+
+    public function threads()
+    {
+        return $this->hasMany(\App\Models\Thread::class);
+    }
+
 
     // ===== Voting & skor =====
     public function recalcScore(): void
@@ -95,16 +116,16 @@ class Thread extends Model
             $term = preg_replace('/[^\p{L}\p{N}\s\+\-\*\~\"\(\)]/u', ' ', $q);
 
             return $query
-                ->whereRaw("MATCH(title, content) AGAINST (? IN BOOLEAN MODE)", [$term.'*'])
-                ->orderByRaw("MATCH(title, content) AGAINST (? IN BOOLEAN MODE) DESC", [$term.'*']);
+                ->whereRaw("MATCH(title, content) AGAINST (? IN BOOLEAN MODE)", [$term . '*'])
+                ->orderByRaw("MATCH(title, content) AGAINST (? IN BOOLEAN MODE) DESC", [$term . '*']);
         }
 
         // Escape % dan _ pada LIKE
-        $like = '%'.addcslashes($q, '%_').'%';
+        $like = '%' . addcslashes($q, '%_') . '%';
 
         return $query->where(function ($w) use ($like) {
             $w->where('title', 'like', $like)
-              ->orWhere('content', 'like', $like);
+                ->orWhere('content', 'like', $like);
         });
     }
 
@@ -113,5 +134,10 @@ class Thread extends Model
     {
         $plain = trim(strip_tags((string) $this->content));
         return str($plain)->limit(160)->toString();
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(\App\Models\Category::class);
     }
 }

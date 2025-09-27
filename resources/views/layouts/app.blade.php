@@ -23,8 +23,8 @@
                 {{-- Brand --}}
                 <a href="/" class="inline-flex items-center gap-2">
                     <span
-                        class="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-fuchsia-600">
-                        ObrolIn
+                        class="font-extrabold text-2xl tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-fuchsia-600">
+                        OmongIn
                     </span>
                 </a>
 

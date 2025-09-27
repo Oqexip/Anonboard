@@ -6,15 +6,6 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CommentController;
 use App\Models\Board;
 
-/*
-|--------------------------------------------------------------------------
-| Public (Anonymous) + Anon middleware
-|--------------------------------------------------------------------------
-| Semua request melewati EnsureAnonSession agar ada anon_id.
-| Izin hapus/edit tetap diputuskan oleh policy/controller (owner anon <=15 menit,
-| owner user, atau admin via Gate).
-*/
-
 Route::middleware('anon')->group(function () {
 
     // Home
@@ -40,11 +31,6 @@ Route::middleware('anon')->group(function () {
     Route::delete('/c/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 });
 
-/*
-|--------------------------------------------------------------------------
-| Authenticated (Breeze)
-|--------------------------------------------------------------------------
-*/
 Route::get('/dashboard', fn () => view('dashboard'))
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
@@ -57,11 +43,6 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
-/*
-|--------------------------------------------------------------------------
-| Fallback 404 (opsional, supaya 404 lebih ramah)
-|--------------------------------------------------------------------------
-*/
 Route::fallback(function () {
     abort(404);
 });
