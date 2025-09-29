@@ -2,7 +2,7 @@
 
 namespace app\Http\Middleware;
 
-use App\Models\AnonSession;
+use app\Models\AnonSession;
 use Closure;
 use Illuminate\Http\Request;
 
