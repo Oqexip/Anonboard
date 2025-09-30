@@ -16,9 +16,6 @@ return new class extends Migration {
         });
 
         // Tambah kolom category_id di threads
-        Schema::table('threads', function (Blueprint $table) {
-            $table->foreignId('category_id')->nullable()->constrained()->nullOnDelete();
-        });
     }
 
     public function down(): void

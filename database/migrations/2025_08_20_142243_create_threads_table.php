@@ -6,15 +6,13 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('threads', function (Blueprint $table) {
             $table->id();
             $table->foreignId('board_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('anon_session_id')->constrained('anon_sessions');
+            $table->foreignId('category_id')->nullable()->constrained('categories')->nullOnDelete();
+            $table->foreignId('anon_session_id')->nullable()->constrained('anon_sessions')->nullOnDelete();
             $table->string('title')->nullable();
             $table->longText('content');
             $table->integer('score')->default(0);
@@ -23,12 +21,11 @@ return new class extends Migration
             $table->boolean('is_pinned')->default(false);
             $table->softDeletes();
             $table->timestamps();
+
+            $table->index(['board_id', 'category_id']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('threads');
