@@ -90,7 +90,7 @@ class CommentController extends Controller
         //     }
         // }
 
-        return back()->with('ok', 'Comment updated');
+        return back()->with('ok', 'Comment edited');
     }
 
     /**
