@@ -132,7 +132,7 @@
             <p>
                 <span class="text-slate-400">Made with ❤️ by</span>
                 <span
-                    class="font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-fuchsia-600">Ilham</span>
+                    class="font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-fuchsia-600">Oqexip</span>
             </p>
         </div>
     </footer>

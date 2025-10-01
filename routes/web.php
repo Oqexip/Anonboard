@@ -4,16 +4,19 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ThreadController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\VoteController;
 use App\Models\Board;
 
-Route::middleware('anon')->group(function () {
+// ✅ route vote diletakkan DI SINI (sebelum fallback)
+Route::middleware('anon')->post('/vote', [VoteController::class, 'store'])->name('vote.store');
 
+Route::middleware('anon')->group(function () {
     // Home
     Route::get('/', function () {
         return view('home', ['boards' => Board::all()]);
     })->name('home');
 
-    // Boards & Threads (index per board + create thread di board tsb)
+    // Boards & Threads
     Route::get('/b/{board:slug}', [ThreadController::class, 'index'])->name('boards.show');
     Route::post('/b/{board:slug}/threads', [ThreadController::class, 'store'])->name('threads.store');
 

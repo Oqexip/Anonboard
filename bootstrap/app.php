@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use App\Providers\AuthServiceProvider;
 use App\Http\Middleware\EnsureAnonSession;
 use App\Http\Middleware\Role;
+use App\Http\Middleware\EnsureAnonKey;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => Role::class,
             'anon' => EnsureAnonSession::class,
+            'anonKey' => EnsureAnonKey::class,
         ]);
     })
     ->withProviders([

@@ -1,3 +1,4 @@
+{{-- ini untuk halaman board --}}
 @php use Illuminate\Support\Str; @endphp
 
 <x-app-layout :title="'/' . $board->slug">

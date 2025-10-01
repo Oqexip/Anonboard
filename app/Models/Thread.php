@@ -6,10 +6,12 @@ use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\Votable;
 
 class Thread extends Model
 {
     use HasFactory, SoftDeletes;
+    use Votable;
 
     protected $fillable = [
         'board_id',
@@ -46,7 +48,7 @@ class Thread extends Model
     }
     public function board()
     {
-        return $this->belongsTo(\App\Models\Board::class);
+        return $this->belongsTo(Board::class);
     }
     public function comments()
     {
@@ -58,7 +60,7 @@ class Thread extends Model
     }
     public function attachments()
     {
-        return $this->morphMany(\App\Models\Attachment::class, 'attachable');
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 
     // ===== Ownership & izin edit =====
@@ -78,7 +80,7 @@ class Thread extends Model
 
     public function threads()
     {
-        return $this->hasMany(\App\Models\Thread::class);
+        return $this->hasMany(Thread::class);
     }
 
 
@@ -138,6 +140,6 @@ class Thread extends Model
 
     public function category()
     {
-        return $this->belongsTo(\App\Models\Category::class);
+        return $this->belongsTo(Category::class);
     }
 }
