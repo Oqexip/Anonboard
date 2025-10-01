@@ -85,4 +85,4 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-💡 Built with ❤️ by **Oqexip** as a learning & sharing project.
+💡 Built with ❤️ by Oqexip as a learning & sharing project.
