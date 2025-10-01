@@ -6,6 +6,9 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\VoteController;
 use App\Models\Board;
+use App\Http\Controllers\PopularController;
+
+
 
 // ✅ route vote diletakkan DI SINI (sebelum fallback)
 Route::middleware('anon')->post('/vote', [VoteController::class, 'store'])->name('vote.store');
@@ -43,6 +46,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile',[ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile',[ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+Route::get('/popular', [PopularController::class, 'index'])->name('popular.index');
 
 require __DIR__.'/auth.php';
 
